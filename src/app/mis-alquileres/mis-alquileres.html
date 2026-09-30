@@ -1,0 +1,60 @@
+<section class="contenedor pagina">
+  <div class="tit-pagina">
+    <div>
+      <h1>Mis alquileres</h1>
+      <p class="suave" style="margin-top: 6px">Consulta el estado de tus reservas y descarga tus comprobantes.</p>
+    </div>
+    <a class="btn btn-acento" routerLink="/vehiculos">Alquilar otro vehículo</a>
+  </div>
+
+  <div class="chips chips-claros" role="group" aria-label="Filtrar alquileres">
+    <button type="button" class="chip" [attr.aria-pressed]="filtro() === 'todos'" (click)="filtro.set('todos')">Todos <span class="chip-n">{{ lista().length }}</span></button>
+    <button type="button" class="chip" [attr.aria-pressed]="filtro() === 'activos'" (click)="filtro.set('activos')">En curso <span class="chip-n">{{ activos() }}</span></button>
+    <button type="button" class="chip" [attr.aria-pressed]="filtro() === 'historial'" (click)="filtro.set('historial')">Historial <span class="chip-n">{{ lista().length - activos() }}</span></button>
+  </div>
+
+  @if (cargando()) {
+    <div class="lista-alquileres" aria-busy="true">
+      @for (n of [1, 2, 3]; track n) { <div class="esqueleto" style="height: 130px"></div> }
+    </div>
+  } @else if (visibles().length === 0) {
+    <div class="vacio" style="margin-top: 18px">
+      <img src="img/tipo-campero.svg" alt="">
+      <h3>{{ lista().length === 0 ? 'Aún no has alquilado ningún vehículo' : 'No hay alquileres en esta vista' }}</h3>
+      <p>Explora el catálogo y reserva tu próximo vehículo.</p>
+      <a class="btn btn-primario" routerLink="/vehiculos">Ver vehículos</a>
+    </div>
+  } @else {
+    <div class="lista-alquileres">
+      @for (a of visibles(); track a.id) {
+        <article class="acard">
+          <div class="acard-foto"><app-foto [v]="a.vehiculo" /></div>
+          <div class="acard-info">
+            <h3>{{ titulo(a.vehiculo) }} <app-placa [placa]="a.vehiculo?.placa" /></h3>
+            <span class="acard-num">{{ a.numeroAlquiler }}</span>
+            <div class="acard-fechas">
+              <div><span>Inicio</span> {{ a.fechaInicio | fecha }}</div>
+              <div><span>Entrega</span> {{ a.fechaEntregaPactada | fecha }}</div>
+              @if (a.fechaEntregaReal) { <div><span>Devuelto</span> {{ a.fechaEntregaReal | fecha }}</div> }
+              <div><span>Duración</span> {{ dias(a) }} {{ dias(a) === 1 ? 'día' : 'días' }}</div>
+            </div>
+          </div>
+          <div class="acard-lado">
+            <span class="estado" [class]="estados[a.estado]?.clase ?? ''">{{ estados[a.estado]?.texto ?? a.estado }}</span>
+            <span class="precio">{{ a.valorTotal | cop }}</span>
+            <div class="acard-acciones">
+              <button type="button" class="btn btn-borde btn-sm" (click)="pdfNumero.set(a.numeroAlquiler)">Comprobante</button>
+              @if (a.estado === 'pendiente de entrega') {
+                <button type="button" class="btn btn-texto-peligro btn-sm" (click)="cancelar(a)">Cancelar</button>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+@if (pdfNumero(); as n) {
+  <app-visor-pdf [numero]="n" (cerrar)="pdfNumero.set(null)" />
+}
