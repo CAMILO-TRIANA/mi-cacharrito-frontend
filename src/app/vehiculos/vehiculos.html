@@ -1,0 +1,146 @@
+<section class="cabecera-pagina">
+  <div class="contenedor">
+    <h1>Hola, {{ primerNombre }}. ¿Qué vas a manejar?</h1>
+    <p>Elige un tipo de vehículo, revisa los disponibles y reserva por fechas. Te generamos el comprobante en PDF al confirmar.</p>
+    <div class="chips" role="group" aria-label="Tipo de vehículo">
+      @for (t of tiposFiltro; track t.valor) {
+        <button type="button" class="chip" [attr.aria-pressed]="tipo() === t.valor" (click)="tipo.set(t.valor)">
+          {{ t.etiqueta }} <span class="chip-n">{{ conteo()[t.valor] ?? 0 }}</span>
+        </button>
+      }
+    </div>
+  </div>
+</section>
+
+<section class="contenedor pagina">
+  <div class="herramientas">
+    <div class="buscador">
+      <input type="search" placeholder="Buscar por marca, modelo, placa o color" aria-label="Buscar vehículo"
+             [ngModel]="texto()" (ngModelChange)="texto.set($event)">
+      <select aria-label="Ordenar por precio" [ngModel]="orden()" (ngModelChange)="orden.set($event)">
+        <option value="precio-asc">Precio: menor a mayor</option>
+        <option value="precio-desc">Precio: mayor a menor</option>
+      </select>
+    </div>
+    @if (!cargando()) {
+      <span class="contador">{{ visibles().length }} {{ visibles().length === 1 ? 'vehículo disponible' : 'vehículos disponibles' }}</span>
+    }
+  </div>
+
+  @if (cargando()) {
+    <div class="grilla-vehiculos" aria-busy="true">
+      @for (n of [1, 2, 3, 4, 5, 6]; track n) { <div class="esqueleto"></div> }
+    </div>
+  } @else if (falloCarga()) {
+    <div class="vacio">
+      <h3>No pudimos cargar el catálogo</h3>
+      <p>Revisa que el servidor esté en ejecución e intenta de nuevo.</p>
+      <button type="button" class="btn btn-primario" (click)="cargar()">Reintentar</button>
+    </div>
+  } @else if (visibles().length === 0) {
+    <div class="vacio">
+      <img src="img/tipo-automovil.svg" alt="">
+      <h3>No hay vehículos con esos filtros</h3>
+      <p>Prueba con otro tipo o borra la búsqueda. Los vehículos alquilados vuelven al catálogo cuando se devuelven.</p>
+      <button type="button" class="btn btn-borde" (click)="tipo.set('todos'); texto.set('')">Ver todos los vehículos</button>
+    </div>
+  } @else {
+    <div class="grilla-vehiculos">
+      @for (v of visibles(); track v.id) {
+        <article class="vcard">
+          <button type="button" class="vcard-foto" (click)="elegir(v)" [attr.aria-label]="'Alquilar ' + titulo(v)">
+            <app-foto [v]="v" />
+          </button>
+          <div class="vcard-cuerpo">
+            <div class="vcard-tit">
+              <h3>{{ titulo(v) }}</h3>
+              <app-placa [placa]="v.placa" />
+            </div>
+            <p class="vcard-sub">{{ etiquetaTipo(v.tipoVehiculo) }}@if (v.anio) {, modelo {{ v.anio }}}</p>
+            <ul class="specs">
+              @if (v.pasajeros) { <li>{{ v.pasajeros }} pasajeros</li> }
+              @if (v.transmision) { <li>{{ v.transmision }}</li> }
+              <li><span class="punto-color" [style.background]="colorHex(v.color)"></span>{{ v.color }}</li>
+            </ul>
+          </div>
+          <div class="vcard-pie">
+            <div><span class="precio">{{ v.valorDia | cop }}</span> <span class="por-dia">por día</span></div>
+            <button type="button" class="btn btn-primario" (click)="elegir(v)">Alquilar</button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<!-- Modal: solicitar alquiler -->
+@if (elegido(); as v) {
+  <app-modal [titulo]="creado() ? 'Alquiler solicitado' : 'Solicitar alquiler'" (cerrar)="cerrarModal()">
+    @if (!creado()) {
+      <div class="resumen-vehiculo">
+        <div class="mini-foto"><app-foto [v]="v" /></div>
+        <div>
+          <h3>{{ titulo(v) }}</h3>
+          <app-placa [placa]="v.placa" />
+          <p class="suave" style="margin-top: 6px">{{ v.valorDia | cop }} por día</p>
+        </div>
+      </div>
+
+      @if (errorLicencia()) { <p class="aviso aviso-error" role="alert">{{ errorLicencia() }}</p> }
+      @if (errorServidor()) { <p class="aviso aviso-error" role="alert">{{ errorServidor() }}</p> }
+
+      <div class="rejilla-2">
+        <div class="campo">
+          <label for="fechaInicio">Fecha de inicio</label>
+          <input id="fechaInicio" type="date" [min]="hoy" [(ngModel)]="fechaInicio">
+        </div>
+        <div class="campo">
+          <label for="fechaEntrega">Fecha de entrega</label>
+          <input id="fechaEntrega" type="date" [min]="fechaInicio || hoy" [(ngModel)]="fechaEntrega">
+        </div>
+      </div>
+      @if (errorFechas()) { <p class="aviso aviso-alerta">{{ errorFechas() }}</p> }
+
+      @if (dias() > 0) {
+        <dl class="cuenta">
+          <div><dt>Duración</dt><dd>{{ dias() }} {{ dias() === 1 ? 'día' : 'días' }}</dd></div>
+          <div><dt>Valor por día</dt><dd>{{ v.valorDia | cop }}</dd></div>
+          <div class="total"><dt>Total</dt><dd>{{ total() | cop }}</dd></div>
+        </dl>
+        <p class="nota">Si devuelves el vehículo después de la fecha pactada, se cobra cada día adicional al valor diario.</p>
+      }
+    } @else {
+      @let a = creado();
+      <div class="exito">
+        <div class="exito-icono">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        </div>
+        <h3>Tu alquiler quedó pendiente de entrega</h3>
+        <p class="suave">Lleva tu licencia y el comprobante para reclamar el vehículo.</p>
+        <dl class="cuenta">
+          <div><dt>N.° de alquiler</dt><dd>{{ a.numeroAlquiler }}</dd></div>
+          <div><dt>Vehículo</dt><dd>{{ titulo(a.vehiculo) }} ({{ a.vehiculo.placa }})</dd></div>
+          <div><dt>Desde</dt><dd>{{ a.fechaInicio | fecha }}</dd></div>
+          <div><dt>Hasta</dt><dd>{{ a.fechaEntregaPactada | fecha }}</dd></div>
+          <div class="total"><dt>Total</dt><dd>{{ a.valorTotal | cop }}</dd></div>
+        </dl>
+      </div>
+    }
+
+    <div pie>
+      @if (!creado()) {
+        <button type="button" class="btn btn-borde" (click)="cerrarModal()">Cancelar</button>
+        <button type="button" class="btn btn-primario" [disabled]="!puedeConfirmar() || enviando()" (click)="confirmarAlquiler()">
+          {{ enviando() ? 'Reservando…' : 'Confirmar alquiler' }}
+        </button>
+      } @else {
+        <button type="button" class="btn btn-borde" (click)="pdfNumero.set(creado().numeroAlquiler)">Ver comprobante PDF</button>
+        <button type="button" class="btn btn-primario" (click)="irMisAlquileres()">Ir a mis alquileres</button>
+      }
+    </div>
+  </app-modal>
+}
+
+@if (pdfNumero(); as n) {
+  <app-visor-pdf [numero]="n" (cerrar)="pdfNumero.set(null)" />
+}

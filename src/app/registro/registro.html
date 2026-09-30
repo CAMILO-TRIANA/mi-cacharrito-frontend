@@ -1,0 +1,96 @@
+@let e = errores();
+@let ver = intentado();
+<div class="auth">
+  <section class="auth-panel" aria-hidden="true">
+    <h1>Crea tu cuenta y reserva hoy</h1>
+    <p>Necesitamos los datos de tu licencia para verificar que puedes conducir el tipo de vehículo que elijas durante todo el alquiler.</p>
+    <div class="auth-escena">
+      <img src="img/tipo-camioneta.svg" alt="">
+    </div>
+  </section>
+
+  <section class="auth-form">
+    <div class="auth-tarjeta" style="max-width: 560px">
+      <h2>Crear cuenta</h2>
+      <p>Todos los campos son obligatorios.</p>
+
+      @if (errorServidor()) {
+        <p class="aviso aviso-error" role="alert">{{ errorServidor() }}</p>
+      }
+
+      <form (ngSubmit)="registrar()" novalidate>
+        <fieldset>
+          <legend>Datos personales</legend>
+          <div class="campo" [class.con-error]="ver && e['numeroIdentificacion']">
+            <label for="numeroIdentificacion">Número de identificación</label>
+            <input id="numeroIdentificacion" type="text" inputmode="numeric" autocomplete="off" [(ngModel)]="usuario.numeroIdentificacion" name="numeroIdentificacion">
+            @if (ver && e['numeroIdentificacion']) { <span class="error-texto">{{ e['numeroIdentificacion'] }}</span> }
+          </div>
+          <div class="campo" [class.con-error]="ver && e['nombreCompleto']">
+            <label for="nombreCompleto">Nombre completo</label>
+            <input id="nombreCompleto" type="text" autocomplete="name" [(ngModel)]="usuario.nombreCompleto" name="nombreCompleto">
+            @if (ver && e['nombreCompleto']) { <span class="error-texto">{{ e['nombreCompleto'] }}</span> }
+          </div>
+          <div class="rejilla-2">
+            <div class="campo" [class.con-error]="ver && e['correo']">
+              <label for="correo">Correo electrónico</label>
+              <input id="correo" type="email" autocomplete="email" [(ngModel)]="usuario.correo" name="correo">
+              @if (ver && e['correo']) { <span class="error-texto">{{ e['correo'] }}</span> }
+            </div>
+            <div class="campo" [class.con-error]="ver && e['telefono']">
+              <label for="telefono">Teléfono</label>
+              <input id="telefono" type="tel" autocomplete="tel" [(ngModel)]="usuario.telefono" name="telefono">
+              @if (ver && e['telefono']) { <span class="error-texto">{{ e['telefono'] }}</span> }
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Licencia de conducción</legend>
+          <div class="campo" [class.con-error]="ver && e['categoriaLicencia']">
+            <label for="categoriaLicencia">Categoría</label>
+            <select id="categoriaLicencia" [(ngModel)]="usuario.categoriaLicencia" name="categoriaLicencia">
+              <option value="">Selecciona una categoría</option>
+              @for (c of categorias; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+            <span class="ayuda">A1 y A2 son para motocicleta; B y C, para los demás vehículos.</span>
+            @if (ver && e['categoriaLicencia']) { <span class="error-texto">{{ e['categoriaLicencia'] }}</span> }
+          </div>
+          <div class="rejilla-2">
+            <div class="campo" [class.con-error]="ver && e['fechaExpedicionLicencia']">
+              <label for="fechaExpedicionLicencia">Fecha de expedición</label>
+              <input id="fechaExpedicionLicencia" type="date" [max]="hoy" [(ngModel)]="usuario.fechaExpedicionLicencia" name="fechaExpedicionLicencia">
+              @if (ver && e['fechaExpedicionLicencia']) { <span class="error-texto">{{ e['fechaExpedicionLicencia'] }}</span> }
+            </div>
+            <div class="campo" [class.con-error]="ver && e['vigenciaLicencia']">
+              <label for="vigenciaLicencia">Vigencia hasta</label>
+              <input id="vigenciaLicencia" type="date" [min]="hoy" [(ngModel)]="usuario.vigenciaLicencia" name="vigenciaLicencia">
+              @if (ver && e['vigenciaLicencia']) { <span class="error-texto">{{ e['vigenciaLicencia'] }}</span> }
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Acceso</legend>
+          <div class="rejilla-2">
+            <div class="campo" [class.con-error]="ver && e['password']">
+              <label for="password">Contraseña</label>
+              <input id="password" type="password" autocomplete="new-password" [(ngModel)]="usuario.password" name="password">
+              @if (ver && e['password']) { <span class="error-texto">{{ e['password'] }}</span> }
+            </div>
+            <div class="campo" [class.con-error]="ver && e['confirmarPassword']">
+              <label for="confirmarPassword">Repite la contraseña</label>
+              <input id="confirmarPassword" type="password" autocomplete="new-password" [(ngModel)]="confirmarPassword" name="confirmarPassword">
+              @if (ver && e['confirmarPassword']) { <span class="error-texto">{{ e['confirmarPassword'] }}</span> }
+            </div>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primario btn-bloque" [disabled]="cargando()">
+          {{ cargando() ? 'Creando cuenta…' : 'Crear cuenta' }}
+        </button>
+      </form>
+      <p class="auth-pie">¿Ya tienes cuenta? <a routerLink="/login">Ingresa</a></p>
+    </div>
+  </section>
+</div>
