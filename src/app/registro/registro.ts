@@ -51,22 +51,38 @@ export class Registro {
     return e;
   }
 
-  registrar() {
-    this.intentado.set(true);
-    this.errorServidor.set('');
-    if (Object.keys(this.errores()).length > 0) return;
+registrar() {
+  this.intentado.set(true);
+  this.errorServidor.set('');
+  if (Object.keys(this.errores()).length > 0) return;
 
-    this.cargando.set(true);
-    this.servicioUsuario.guardarUsuario(this.usuario).subscribe({
-      next: () => {
-        this.cargando.set(false);
-        this.notificacion.ok('Cuenta creada. Ya puedes iniciar sesión.');
-        this.router.navigate(['/login']);
-      },
-      error: (err) => {
-        this.cargando.set(false);
-        this.errorServidor.set(mensajeError(err));
-      }
-    });
-  }
+  this.cargando.set(true);
+
+  // Mapeo explicito del DTO para asegurar equivalencia exacta con la entidad Java
+  const datosRegistro = {
+    numeroIdentificacion: this.usuario.numeroIdentificacion.trim(),
+    nombreCompleto: this.usuario.nombreCompleto.trim(),
+    correo: this.usuario.correo.trim(),
+    telefono: this.usuario.telefono.replace(/\s/g, ''),
+    categoriaLicencia: this.usuario.categoriaLicencia,
+    fechaExpedicionLicencia: this.usuario.fechaExpedicionLicencia,
+    vigenciaLicencia: this.usuario.vigenciaLicencia,
+    password: this.usuario.password
+  };
+
+  console.log('JSON enviado al backend:', datosRegistro);
+
+  this.servicioUsuario.guardarUsuario(datosRegistro).subscribe({
+    next: () => {
+      this.cargando.set(false);
+      this.notificacion.ok('Cuenta creada. Ya puedes iniciar sesión.');
+      this.router.navigate(['/login']);
+    },
+    error: (err) => {
+      this.cargando.set(false);
+      console.error('Error del servidor:', err);
+      this.errorServidor.set(mensajeError(err));
+    }
+  });
+}
 }
